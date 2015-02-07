@@ -172,6 +172,18 @@ some typing in common cases:
 local C, ffi = require 'cdef' { ... }
 ```
 
+
+By adding `find = true` cdef changes its result to an iterator to get the
+statements into lua without loading them:
+
+```lua
+local cdef = require 'cdef'
+for statement in cdef({ find = true, ... }) do
+    print(statement.kind, statement.name, statement.extent, statement.file)
+end
+
+```
+
 Stability
 ---------
 
