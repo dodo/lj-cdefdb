@@ -277,6 +277,47 @@ local function emit(to_dump, ldbg)
     ldbg(']==]')
 end
 
+local function iter(to_dump)
+    local i = 0
+    return function ()
+        i = i + 1
+        if i <= #to_dump then
+            local idx = to_dump[i]
+            local stmt = lC.cdefdb_stmts[idx]
+            local deps = { }
+
+            foreach_dep(stmt.deps, function (dep_idx)
+                local dep = lC.cdefdb_stmts[dep_idx]
+                local kind = get_string(dep.kind)
+                local name = get_string(dep.name)
+                local kname = kind..'\0'..name
+                deps[kname] = {
+                    kind = kind,
+                    name = name,
+                }
+            end)
+            foreach_dep(stmt.delayed_deps, function (dep_idx)
+                local dep = lC.cdefdb_stmts[dep_idx]
+                local kind = get_string(dep.kind)
+                local name = get_string(dep.name)
+                local kname = kind..'\0'..name
+                deps[kname] = {
+                    kind = kind,
+                    name = name,
+                    delayed = true,
+                }
+            end)
+            return {
+                deps = deps,
+                kind = get_string(stmt.kind),
+                name = get_string(stmt.name),
+                file = get_string(stmt.file),
+                extent = get_string(stmt.extent),
+            }
+        end
+    end
+end
+
 local function to_dump_constants(to_dump, name)
     local b, t = find_constants(name)
     for i = b, t-1 do
@@ -311,20 +352,27 @@ local function cdef_(spec)
         end
         if k == 'constants' then
             for _, name in ipairs(v) do
-                if not loaded[name] then
+                if spec.find or not loaded[name] then
                     to_dump_constants(to_dump, name)
-                    loaded[name] = true
+                    if not spec.find then
+                        loaded[name] = true
+                    end
                 end
             end
         elseif kindmap[k] then
             for _, name in ipairs(v) do
                 local kname = k..'\0'..name
-                if not loaded[kname] then
+                if spec.find or not loaded[kname] then
                     to_dump_stmts(to_dump, kindmap[k], name)
-                    loaded[kname]= true
+                    if not spec.find then
+                        loaded[kname] = true
+                    end
                 end
             end
         end
+    end
+    if spec.find then
+        return iter(to_dump)
     end
     emit(to_dump, spec.verbose and print)
     return C, ffi
