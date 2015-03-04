@@ -50,6 +50,7 @@ local lC = ffi.load(cdefdb_so_path or 'cdefdb.so', true)
 
 local strcache = setmetatable({ }, { __mode = 'v' })
 local function get_string(offset)
+    if not offset then return nil end
     local ret = strcache[offset]
     if not ret then
         ret = ffi_string(lC.cdefdb_stmt_strings + offset)
