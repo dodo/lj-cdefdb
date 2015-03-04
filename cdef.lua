@@ -354,7 +354,7 @@ local function cdef_(spec)
             for _, name in ipairs(v) do
                 if spec.find or not loaded[name] then
                     to_dump_constants(to_dump, name)
-                    if not spec.find then
+                    if not spec.find or spec.ignore then
                         loaded[name] = true
                     end
                 end
@@ -364,7 +364,7 @@ local function cdef_(spec)
                 local kname = k..'\0'..name
                 if spec.find or not loaded[kname] then
                     to_dump_stmts(to_dump, kindmap[k], name)
-                    if not spec.find then
+                    if not spec.find or spec.ignore then
                         loaded[kname] = true
                     end
                 end
@@ -374,7 +374,13 @@ local function cdef_(spec)
     if spec.find then
         return iter(to_dump)
     end
-    emit(to_dump, spec.verbose and print)
+    if spec.ignore then
+        for i = 1, #to_dump do
+            visited[to_dump[i]] = 1
+        end
+    else
+        emit(to_dump, spec.verbose and print)
+    end
     return C, ffi
 end
 
