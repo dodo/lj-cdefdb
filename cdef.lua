@@ -357,6 +357,8 @@ local kindmap = {
 local loaded = { }
 local function cdef_(spec)
     local to_dump = { }
+    local ldbg = spec.verbose and print or dbg
+    local lerror = spec.find and ldbg or error
     for k, v in pairs(spec) do
         if type(v) == 'string' then
             v = { v }
@@ -364,7 +366,7 @@ local function cdef_(spec)
         if k == 'constants' then
             for _, name in ipairs(v) do
                 if spec.find or not loaded[name] then
-                    to_dump_constants(to_dump, name)
+                    to_dump_constants(to_dump, name, lerror)
                     if not spec.find or spec.ignore then
                         loaded[name] = true
                     end
@@ -374,7 +376,7 @@ local function cdef_(spec)
             for _, name in ipairs(v) do
                 local kname = k..'\0'..name
                 if spec.find or not loaded[kname] then
-                    to_dump_stmts(to_dump, kindmap[k], name)
+                    to_dump_stmts(to_dump, kindmap[k], name, lerror)
                     if not spec.find or spec.ignore then
                         loaded[kname] = true
                     end
@@ -390,7 +392,7 @@ local function cdef_(spec)
             visited[to_dump[i]] = 1
         end
     else
-        emit(to_dump, nil, ldbg)
+        emit(to_dump, lerror, ldbg)
     end
     return C, ffi
 end
