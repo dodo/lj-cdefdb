@@ -130,7 +130,8 @@ local function string_plus_one(str)
     return str:sub(1, -2) .. string.char(str:byte(-1) + 1)
 end
 
-local function find_stmts(kind, name)
+local function find_stmts(kind, name, lerror)
+    lerror = lerror or error
     local star
     if name:sub(-1) == '*' then
         name = name:sub(1, -2)
@@ -159,7 +160,8 @@ local function find_stmts(kind, name)
         then
             return b, b + 1
         else
-            error("cdef: Couldn't find "..kind.." "..name)
+            lerror("cdef: Couldn't find "..kind.." "..name)
+            return 0, 0
         end
     end
     local cmp_lt_namf = cmp2fn('kind', kind, 'name', namf, string_lt)
@@ -171,12 +173,14 @@ local function find_stmts(kind, name)
         end)
     -- print('b', b, 'max', max, 't', t)
     if b >= t then
-        error("cdef: No matching "..kind.." "..name.."*")
+        lerror("cdef: No matching "..kind.." "..name.."*")
+        return 0, 0
     end
     return b, t
 end
 
-local function find_constants(name)
+local function find_constants(name, lerror)
+    lerror = lerror or error
     local star
     if name:sub(-1) == '*' then
         name = name:sub(1, -2)
@@ -204,7 +208,8 @@ local function find_constants(name)
         if get_string(lC.cdefdb_constants_idx[b].name) == name then
             return b, b + 1
         else
-            error("cdef: Couldn't find constant "..name)
+            lerror("cdef: Couldn't find constant "..name)
+            return 0, 0
         end
     end
     local t = lower_bound(
@@ -213,7 +218,8 @@ local function find_constants(name)
         function (entry) return string_lt(entry.name, namf) end)
     -- print('b', b, 'max', max, 't', t)
     if b >= t then
-        error("cdef: No matching constants: "..name.."*")
+        lerror("cdef: No matching constants: "..name.."*")
+        return 0, 0
     end
     return b, t
 end
@@ -225,7 +231,8 @@ local keyword_for_kind = {
     UnionDecl = 'union',
 }
 
-local function emit(to_dump, ldbg)
+local function emit(to_dump, lerror, ldbg)
+    lerror = lerror or error
     ldbg = ldbg or dbg
     local macros = { }
     local function dump(idx)
@@ -242,7 +249,8 @@ local function emit(to_dump, ldbg)
                 visited[idx] = 3
                 return
             else
-                error('circular '..kind..' '..get_string(stmt.extent))
+                lerror('circular '..kind..' '..get_string(stmt.extent))
+                return
             end
         end
         visited[idx] = 2
@@ -319,16 +327,18 @@ local function iter(to_dump)
     end
 end
 
-local function to_dump_constants(to_dump, name)
-    local b, t = find_constants(name)
+local function to_dump_constants(to_dump, name, lerror)
+    lerror = lerror or error
+    local b, t = find_constants(name, lerror)
     for i = b, t-1 do
         to_dump[#to_dump + 1] = lC.cdefdb_constants_idx[i].stmt
         -- print('constant', i, to_dump[#to_dump])
     end
 end
 
-local function to_dump_stmts(to_dump, kind, name)
-    local b, t = find_stmts(kind, name)
+local function to_dump_stmts(to_dump, kind, name, lerror)
+    lerror = lerror or error
+    local b, t = find_stmts(kind, name, lerror)
     for i = b, t-1 do
         to_dump[#to_dump + 1] = lC.cdefdb_stmt_index_kind_name_file[i]
         -- print('stmt', i, to_dump[#to_dump])
@@ -380,7 +390,7 @@ local function cdef_(spec)
             visited[to_dump[i]] = 1
         end
     else
-        emit(to_dump, spec.verbose and print)
+        emit(to_dump, nil, ldbg)
     end
     return C, ffi
 end
