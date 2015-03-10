@@ -352,6 +352,7 @@ local kindmap = {
     unions = 'UnionDecl',
     enums = 'EnumDecl',
     typedefs = 'TypedefDecl',
+    macros = 'MacroDefinition',
 }
 
 local loaded = { }
@@ -359,6 +360,7 @@ local function cdef_(spec)
     local to_dump = { }
     local ldbg = spec.verbose and print or dbg
     local lerror = spec.find and ldbg or error
+    if not spec.find then spec.macros = nil end -- not implemented
     for k, v in pairs(spec) do
         if type(v) == 'string' then
             v = { v }
